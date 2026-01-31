@@ -6,8 +6,16 @@ GET {{ServicePulseMonitor_HostAddress}}/health
 ### Swagger
 GET {{ServicePulseMonitor_HostAddress}}/swagger
 
-### Get All Services 
-GET {{ServicePulseMonitor_HostAddress}}/api/services
+###
+### Services API
+###
+
+### Get All Services (Paginated - First Page)
+GET {{ServicePulseMonitor_HostAddress}}/api/services?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get All Services (Second Page)
+GET {{ServicePulseMonitor_HostAddress}}/api/services?pageNumber=2&pageSize=10
 Accept: application/json
 
 ### Register New Service (Success)
@@ -69,6 +77,40 @@ GET {{ServicePulseMonitor_HostAddress}}/api/services/4
 
 ### Get Non-Existent Service (Should return 404)
 GET {{ServicePulseMonitor_HostAddress}}/api/services/9999
+
+### Update Service
+PUT {{ServicePulseMonitor_HostAddress}}/api/services/1
+Content-Type: application/json
+
+{
+  "serviceName": "User Service",
+  "baseUrl": "http://localhost:5001",
+  "description": "Updated: Handles user authentication and authorization"
+}
+
+### Update Service - Duplicate Name (Should Fail with 409)
+PUT {{ServicePulseMonitor_HostAddress}}/api/services/1
+Content-Type: application/json
+
+{
+  "serviceName": "Order Service",
+  "baseUrl": "http://localhost:5001"
+}
+
+### Delete Service (Use a test service ID)
+DELETE {{ServicePulseMonitor_HostAddress}}/api/services/4
+
+### Search Services by Name
+GET {{ServicePulseMonitor_HostAddress}}/api/services/search?q=User
+Accept: application/json
+
+### Search Services - Empty Query (Should Fail)
+GET {{ServicePulseMonitor_HostAddress}}/api/services/search?q=
+Accept: application/json
+
+### Get Service Health Summary
+GET {{ServicePulseMonitor_HostAddress}}/api/services/1/health
+Accept: application/json
 
 ###
 ### Health Check Endpoints

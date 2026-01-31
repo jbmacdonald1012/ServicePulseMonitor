@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Features.Services;
+using ServicePulseMonitor.Common;
 
 namespace ServicePulseMonitor.Controllers;
 
@@ -53,7 +54,30 @@ public class ServicesController : ControllerBase
     }
 
     /// <summary>
-    /// Get service by ID (placeholder for Phase 2, Step 5)
+    /// Get all services (paginated)
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<ServiceDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ServiceDto>>> GetAllServices(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (pageNumber < 1)
+        {
+            return BadRequest(new { message = "Page number must be >= 1" });
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new { message = "Page size must be between 1 and 100" });
+        }
+
+        var result = await _registrationService.GetAllServicesAsync(pageNumber, pageSize);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get service by ID
     /// </summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
@@ -68,5 +92,90 @@ public class ServicesController : ControllerBase
         }
 
         return Ok(service);
+    }
+
+    /// <summary>
+    /// Update an existing service
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ServiceDto>> UpdateService(long id, [FromBody] UpdateServiceDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var result = await _registrationService.UpdateServiceAsync(id, dto);
+
+            if (result == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Service update failed: {ServiceId}", id);
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Delete a service
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteService(long id)
+    {
+        var deleted = await _registrationService.DeleteServiceAsync(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Search services by name
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IEnumerable<ServiceDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ServiceDto>>> SearchServices([FromQuery] string q)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            return BadRequest(new { message = "Search query 'q' is required" });
+        }
+
+        var services = await _registrationService.SearchServicesByNameAsync(q);
+        return Ok(services);
+    }
+
+    /// <summary>
+    /// Get service health summary
+    /// </summary>
+    [HttpGet("{id}/health")]
+    [ProducesResponseType(typeof(ServiceHealthSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceHealthSummaryDto>> GetServiceHealthSummary(long id)
+    {
+        var summary = await _registrationService.GetServiceHealthSummaryAsync(id);
+
+        if (summary == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(summary);
     }
 }
