@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.Seed;
+using ServicePulseMonitor.Features.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddDbContext<ServicePulseDbContext>(options =>
         options.EnableDetailedErrors();
     }
 });
+
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
