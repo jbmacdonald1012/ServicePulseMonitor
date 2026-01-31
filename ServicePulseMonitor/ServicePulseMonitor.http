@@ -1,6 +1,21 @@
 @ServicePulseMonitor_HostAddress = http://localhost:5291
 
-GET {{ServicePulseMonitor_HostAddress}}/weatherforecast/
+### Health Check
+GET {{ServicePulseMonitor_HostAddress}}/health
+
+### Swagger
+GET {{ServicePulseMonitor_HostAddress}}/swagger
+
+### Get All Services 
+GET {{ServicePulseMonitor_HostAddress}}/api/services
 Accept: application/json
 
-###
+### Register Service 
+POST {{ServicePulseMonitor_HostAddress}}/api/services
+Content-Type: application/json
+
+{
+  "serviceName": "Test Service",
+  "baseUrl": "http://localhost:8080",
+  "description": "Test service for development"
+}

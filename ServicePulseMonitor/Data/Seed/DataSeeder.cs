@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using ServicePulseMonitor.Models;
+using ServicePulseMonitor.Data.Models;
 using System.Text.Json;
 
 namespace ServicePulseMonitor.Data.Seed;

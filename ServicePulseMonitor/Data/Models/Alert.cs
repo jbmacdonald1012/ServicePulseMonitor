@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ServicePulseMonitor.Models;
+namespace ServicePulseMonitor.Data.Models;
 
 public class Alert
 {

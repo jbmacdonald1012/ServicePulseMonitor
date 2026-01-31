@@ -1,4 +1,4 @@
-namespace ServicePulseMonitor.Models;
+namespace ServicePulseMonitor.Data.Models;
 
 public class NotificationConfig
 {
