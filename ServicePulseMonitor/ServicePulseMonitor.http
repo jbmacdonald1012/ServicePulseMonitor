@@ -69,3 +69,109 @@ GET {{ServicePulseMonitor_HostAddress}}/api/services/4
 
 ### Get Non-Existent Service (Should return 404)
 GET {{ServicePulseMonitor_HostAddress}}/api/services/9999
+
+###
+### Health Check Endpoints
+###
+
+### Submit Healthy Health Check
+POST {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Healthy",
+  "responseTimeMs": 45,
+  "details": {
+    "cpu": 23.5,
+    "memory": 512,
+    "activeConnections": 42
+  }
+}
+
+### Submit Degraded Health Check
+POST {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Degraded",
+  "responseTimeMs": 250,
+  "details": {
+    "cpu": 75.0,
+    "memory": 1800,
+    "warning": "High CPU usage"
+  }
+}
+
+### Submit Unhealthy Health Check
+POST {{ServicePulseMonitor_HostAddress}}/api/services/2/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Unhealthy",
+  "responseTimeMs": 5000,
+  "details": {
+    "error": "Database connection failed",
+    "lastSuccess": "2026-01-31T14:00:00Z"
+  }
+}
+
+### Submit Minimal Health Check (No Details)
+POST {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Healthy"
+}
+
+### Validation Error - Invalid Status
+POST {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Unknown",
+  "responseTimeMs": 50
+}
+
+### Validation Error - Negative Response Time
+POST {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Healthy",
+  "responseTimeMs": -10
+}
+
+### Submit to Non-Existent Service
+POST {{ServicePulseMonitor_HostAddress}}/api/services/9999/healthchecks
+Content-Type: application/json
+
+{
+  "status": "Healthy"
+}
+
+### Get Health Check by ID
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks/1
+
+### Get Recent Health Checks for Service
+GET {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks?limit=5
+
+### Get Latest Health Check for Service
+GET {{ServicePulseMonitor_HostAddress}}/api/services/1/healthchecks/latest
+
+### Get Health Checks by Status (Unhealthy)
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks/status/Unhealthy?limit=10
+
+### Get Health Checks by Status (Healthy)
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks/status/Healthy?limit=20
+
+### Get All Health Checks (First Page)
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks?limit=10&offset=0
+
+### Get All Health Checks (Second Page)
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks?limit=10&offset=10
+
+### Invalid Limit (Too High)
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks?limit=500
+
+### Invalid Status Filter
+GET {{ServicePulseMonitor_HostAddress}}/api/healthchecks/status/InvalidStatus

@@ -43,7 +43,7 @@ public class RegistrationService : IRegistrationService
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
-        return service == null ? null : ServiceMapper.ToDto(service);
+        return service is null ? null : ServiceMapper.ToDto(service);
     }
 
     public async Task<ServiceDto?> GetServiceByNameAsync(string serviceName)
@@ -52,7 +52,7 @@ public class RegistrationService : IRegistrationService
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.ServiceName == serviceName);
 
-        return service == null ? null : ServiceMapper.ToDto(service);
+        return service is null ? null : ServiceMapper.ToDto(service);
     }
 
     public async Task<bool> ServiceExistsAsync(string serviceName)

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.Seed;
 using ServicePulseMonitor.Features.Services;
+using ServicePulseMonitor.Features.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,7 @@ builder.Services.AddDbContext<ServicePulseDbContext>(options =>
 });
 
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -62,3 +64,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

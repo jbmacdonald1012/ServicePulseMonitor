@@ -62,7 +62,7 @@ public class ServicesController : ControllerBase
     {
         var service = await _registrationService.GetServiceByIdAsync(id);
 
-        if (service == null)
+        if (service is null)
         {
             return NotFound();
         }
