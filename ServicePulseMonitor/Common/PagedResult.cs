@@ -1,11 +1,11 @@
 namespace ServicePulseMonitor.Common;
 
-public class PagedResult<T>
+public record PagedResult<T>
 {
-    public IEnumerable<T> Items { get; set; } = new List<T>();
-    public int TotalCount { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
+    public IEnumerable<T> Items { get; init; } = [];
+    public int TotalCount { get; init; }
+    public int PageNumber { get; init; }
+    public int PageSize { get; init; }
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
     public bool HasPrevious => PageNumber > 1;
     public bool HasNext => PageNumber < TotalPages;

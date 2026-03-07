@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ServicePulseMonitor.Common;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Features.HealthChecks;
 
@@ -6,19 +7,9 @@ namespace ServicePulseMonitor.Controllers;
 
 [ApiController]
 [Route("api/healthchecks")]
-public class HealthChecksController : ControllerBase
+public class HealthChecksController(IHealthCheckService healthCheckService, ILogger<HealthChecksController> logger)
+    : ControllerBase
 {
-    private readonly IHealthCheckService _healthCheckService;
-    private readonly ILogger<HealthChecksController> _logger;
-
-    public HealthChecksController(
-        IHealthCheckService healthCheckService,
-        ILogger<HealthChecksController> logger)
-    {
-        _healthCheckService = healthCheckService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Submit a health check result for a service
     /// </summary>
@@ -37,14 +28,9 @@ public class HealthChecksController : ControllerBase
         long serviceId,
         [FromBody] CreateHealthCheckDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         try
         {
-            var result = await _healthCheckService.SubmitHealthCheckAsync(serviceId, dto);
+            var result = await healthCheckService.SubmitHealthCheckAsync(serviceId, dto);
 
             return CreatedAtAction(
                 nameof(GetHealthCheckById),
@@ -53,8 +39,8 @@ public class HealthChecksController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Health check submission failed for service {ServiceId}", serviceId);
-            return NotFound(new { message = ex.Message });
+            logger.LogWarning(ex, "Health check submission failed for service {ServiceId}", serviceId);
+            return Problem(detail: ex.Message, statusCode: 404);
         }
     }
 
@@ -70,7 +56,7 @@ public class HealthChecksController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<HealthCheckDto>> GetHealthCheckById(long id)
     {
-        var healthCheck = await _healthCheckService.GetHealthCheckByIdAsync(id);
+        var healthCheck = await healthCheckService.GetHealthCheckByIdAsync(id);
 
         if (healthCheck is null)
         {
@@ -96,10 +82,10 @@ public class HealthChecksController : ControllerBase
     {
         if (limit < 1 || limit > 100)
         {
-            return BadRequest(new { message = "Limit must be between 1 and 100" });
+            return Problem(detail: "Limit must be between 1 and 100", statusCode: 400);
         }
 
-        var healthChecks = await _healthCheckService.GetHealthChecksByServiceIdAsync(serviceId, limit);
+        var healthChecks = await healthCheckService.GetHealthChecksByServiceIdAsync(serviceId, limit);
         return Ok(healthChecks);
     }
 
@@ -116,11 +102,11 @@ public class HealthChecksController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<HealthCheckDto>> GetLatestHealthCheck(long serviceId)
     {
-        var healthCheck = await _healthCheckService.GetLatestHealthCheckAsync(serviceId);
+        var healthCheck = await healthCheckService.GetLatestHealthCheckAsync(serviceId);
 
         if (healthCheck is null)
         {
-            return NotFound(new { message = $"No health checks found for service {serviceId}" });
+            return Problem(detail: $"No health checks found for service {serviceId}", statusCode: 404);
         }
 
         return Ok(healthCheck);
@@ -142,48 +128,44 @@ public class HealthChecksController : ControllerBase
         string status,
         [FromQuery] int limit = 50)
     {
-        var validStatuses = new[] { "Healthy", "Degraded", "Unhealthy" };
-        if (!validStatuses.Contains(status))
+        if (status is not ("Healthy" or "Degraded" or "Unhealthy"))
         {
-            return BadRequest(new
-            {
-                message = "Invalid status. Must be 'Healthy', 'Degraded', or 'Unhealthy'"
-            });
+            return Problem(detail: "Invalid status. Must be 'Healthy', 'Degraded', or 'Unhealthy'", statusCode: 400);
         }
 
         if (limit < 1 || limit > 200)
         {
-            return BadRequest(new { message = "Limit must be between 1 and 200" });
+            return Problem(detail: "Limit must be between 1 and 200", statusCode: 400);
         }
 
-        var healthChecks = await _healthCheckService.GetHealthChecksByStatusAsync(status, limit);
+        var healthChecks = await healthCheckService.GetHealthChecksByStatusAsync(status, limit);
         return Ok(healthChecks);
     }
 
     /// <summary>
     /// Get all health checks (paginated)
     /// </summary>
-    /// <param name="limit">Maximum number of results (default: 20, max: 100)</param>
-    /// <param name="offset">Number of records to skip (default: 0)</param>
-    /// <returns>List of health checks</returns>
+    /// <param name="pageNumber">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 20, max: 100)</param>
+    /// <returns>Paged list of health checks</returns>
     /// <response code="200">Health checks retrieved</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<HealthCheckDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<HealthCheckDto>>> GetAllHealthChecks(
-        [FromQuery] int limit = 20,
-        [FromQuery] int offset = 0)
+    [ProducesResponseType(typeof(PagedResult<HealthCheckDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<HealthCheckDto>>> GetAllHealthChecks(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        if (limit < 1 || limit > 100)
+        if (pageNumber < 1)
         {
-            return BadRequest(new { message = "Limit must be between 1 and 100" });
+            return Problem(detail: "Page number must be >= 1", statusCode: 400);
         }
 
-        if (offset < 0)
+        if (pageSize < 1 || pageSize > 100)
         {
-            return BadRequest(new { message = "Offset must be non-negative" });
+            return Problem(detail: "Page size must be between 1 and 100", statusCode: 400);
         }
 
-        var healthChecks = await _healthCheckService.GetAllHealthChecksAsync(limit, offset);
-        return Ok(healthChecks);
+        var result = await healthCheckService.GetAllHealthChecksAsync(pageNumber, pageSize);
+        return Ok(result);
     }
 }

@@ -218,6 +218,37 @@ public class HealthCheckServiceTests
     }
 
     [Test]
+    public async Task GetAllHealthChecksAsync_ReturnsPaged_CorrectPageBehavior()
+    {
+        using var context = TestDbContextFactory.CreateInMemoryContext();
+        var service = new Service
+        {
+            ServiceName = "Test Service",
+            RegisteredAt = DateTime.UtcNow,
+            LastSeenAt = DateTime.UtcNow
+        };
+        context.Services.Add(service);
+        await context.SaveChangesAsync();
+
+        context.HealthChecks.AddRange(
+            new HealthCheck { ServiceId = service.ServiceId, Status = "Healthy", CheckedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new HealthCheck { ServiceId = service.ServiceId, Status = "Degraded", CheckedAt = DateTime.UtcNow.AddMinutes(-1) },
+            new HealthCheck { ServiceId = service.ServiceId, Status = "Unhealthy", CheckedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var logger = NullLogger<HealthCheckService>.Instance;
+        var healthCheckService = new HealthCheckService(context, logger);
+
+        var result = await healthCheckService.GetAllHealthChecksAsync(pageNumber: 1, pageSize: 2);
+
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.Items.Count(), Is.EqualTo(2));
+        Assert.That(result.HasNext, Is.True);
+        Assert.That(result.HasPrevious, Is.False);
+    }
+
+    [Test]
     public async Task GetHealthChecksByStatusAsync_FiltersCorrectly()
     {
         using var context = TestDbContextFactory.CreateInMemoryContext();

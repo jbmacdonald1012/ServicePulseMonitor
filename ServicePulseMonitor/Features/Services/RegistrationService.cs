@@ -7,32 +7,24 @@ using Microsoft.Extensions.Logging;
 
 namespace ServicePulseMonitor.Features.Services;
 
-public class RegistrationService : IRegistrationService
+public class RegistrationService(ServicePulseDbContext context, ILogger<RegistrationService> logger)
+    : IRegistrationService
 {
-    private readonly ServicePulseDbContext _context;
-    private readonly ILogger<RegistrationService> _logger;
-
-    public RegistrationService(ServicePulseDbContext context, ILogger<RegistrationService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
     public async Task<ServiceDto> RegisterServiceAsync(CreateServiceDto dto)
     {
         var exists = await ServiceExistsAsync(dto.ServiceName);
         if (exists)
         {
-            _logger.LogWarning("Attempted to register duplicate service: {ServiceName}", dto.ServiceName);
+            logger.LogWarning("Attempted to register duplicate service: {ServiceName}", dto.ServiceName);
             throw new InvalidOperationException($"Service with name '{dto.ServiceName}' already exists");
         }
 
         var service = ServiceMapper.ToEntity(dto);
 
-        _context.Services.Add(service);
-        await _context.SaveChangesAsync();
+        context.Services.Add(service);
+        await context.SaveChangesAsync();
 
-        _logger.LogInformation("Service registered: {ServiceName} (ID: {ServiceId})",
+        logger.LogInformation("Service registered: {ServiceName} (ID: {ServiceId})",
             service.ServiceName, service.ServiceId);
 
         return ServiceMapper.ToDto(service);
@@ -40,7 +32,7 @@ public class RegistrationService : IRegistrationService
 
     public async Task<ServiceDto?> GetServiceByIdAsync(long serviceId)
     {
-        var service = await _context.Services
+        var service = await context.Services
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
@@ -49,7 +41,7 @@ public class RegistrationService : IRegistrationService
 
     public async Task<ServiceDto?> GetServiceByNameAsync(string serviceName)
     {
-        var service = await _context.Services
+        var service = await context.Services
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.ServiceName == serviceName);
 
@@ -58,13 +50,13 @@ public class RegistrationService : IRegistrationService
 
     public async Task<bool> ServiceExistsAsync(string serviceName)
     {
-        return await _context.Services
+        return await context.Services
             .AnyAsync(s => s.ServiceName == serviceName);
     }
 
     public async Task<PagedResult<ServiceDto>> GetAllServicesAsync(int pageNumber = 1, int pageSize = 20)
     {
-        var query = _context.Services.AsNoTracking();
+        var query = context.Services.AsNoTracking();
 
         var totalCount = await query.CountAsync();
 
@@ -85,10 +77,10 @@ public class RegistrationService : IRegistrationService
 
     public async Task<ServiceDto?> UpdateServiceAsync(long serviceId, UpdateServiceDto dto)
     {
-        var service = await _context.Services.FindAsync(serviceId);
-        if (service == null)
+        var service = await context.Services.FindAsync(serviceId);
+        if (service is null)
         {
-            _logger.LogWarning("Attempted to update non-existent service: {ServiceId}", serviceId);
+            logger.LogWarning("Attempted to update non-existent service: {ServiceId}", serviceId);
             return null;
         }
 
@@ -97,7 +89,7 @@ public class RegistrationService : IRegistrationService
             var nameExists = await ServiceExistsAsync(dto.ServiceName);
             if (nameExists)
             {
-                _logger.LogWarning("Attempted to update service {ServiceId} with duplicate name: {ServiceName}",
+                logger.LogWarning("Attempted to update service {ServiceId} with duplicate name: {ServiceName}",
                     serviceId, dto.ServiceName);
                 throw new InvalidOperationException($"Service with name '{dto.ServiceName}' already exists");
             }
@@ -107,9 +99,9 @@ public class RegistrationService : IRegistrationService
         service.BaseUrl = dto.BaseUrl;
         service.Description = dto.Description;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        _logger.LogInformation("Service updated: {ServiceName} (ID: {ServiceId})",
+        logger.LogInformation("Service updated: {ServiceName} (ID: {ServiceId})",
             service.ServiceName, serviceId);
 
         return ServiceMapper.ToDto(service);
@@ -117,17 +109,17 @@ public class RegistrationService : IRegistrationService
 
     public async Task<bool> DeleteServiceAsync(long serviceId)
     {
-        var service = await _context.Services.FindAsync(serviceId);
-        if (service == null)
+        var service = await context.Services.FindAsync(serviceId);
+        if (service is null)
         {
-            _logger.LogWarning("Attempted to delete non-existent service: {ServiceId}", serviceId);
+            logger.LogWarning("Attempted to delete non-existent service: {ServiceId}", serviceId);
             return false;
         }
 
-        _context.Services.Remove(service);
-        await _context.SaveChangesAsync();
+        context.Services.Remove(service);
+        await context.SaveChangesAsync();
 
-        _logger.LogInformation("Service deleted: {ServiceName} (ID: {ServiceId})",
+        logger.LogInformation("Service deleted: {ServiceName} (ID: {ServiceId})",
             service.ServiceName, serviceId);
 
         return true;
@@ -135,7 +127,7 @@ public class RegistrationService : IRegistrationService
 
     public async Task<IEnumerable<ServiceDto>> SearchServicesByNameAsync(string query)
     {
-        var services = await _context.Services
+        var services = await context.Services
             .Where(s => s.ServiceName.Contains(query))
             .AsNoTracking()
             .OrderBy(s => s.ServiceName)
@@ -146,12 +138,12 @@ public class RegistrationService : IRegistrationService
 
     public async Task<ServiceHealthSummaryDto?> GetServiceHealthSummaryAsync(long serviceId)
     {
-        var service = await _context.Services
+        var service = await context.Services
             .Include(s => s.HealthChecks)
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
-        if (service == null)
+        if (service is null)
         {
             return null;
         }

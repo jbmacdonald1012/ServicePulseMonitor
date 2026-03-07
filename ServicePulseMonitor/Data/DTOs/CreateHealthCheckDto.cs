@@ -2,15 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ServicePulseMonitor.Data.DTOs;
 
-public class CreateHealthCheckDto
+public record CreateHealthCheckDto
 {
     [Required(ErrorMessage = "Status is required")]
     [RegularExpression("^(Healthy|Degraded|Unhealthy)$",
         ErrorMessage = "Status must be 'Healthy', 'Degraded', or 'Unhealthy'")]
-    public string Status { get; set; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
 
     [Range(0, int.MaxValue, ErrorMessage = "Response time must be non-negative")]
-    public int? ResponseTimeMs { get; set; }
+    public int? ResponseTimeMs { get; init; }
 
-    public Dictionary<string, object>? Details { get; set; }
+    public Dictionary<string, object>? Details { get; init; }
 }

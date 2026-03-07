@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ServicePulseMonitor.Common;
 using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Data.Models;
@@ -6,35 +7,27 @@ using Microsoft.Extensions.Logging;
 
 namespace ServicePulseMonitor.Features.HealthChecks;
 
-public class HealthCheckService : IHealthCheckService
+public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthCheckService> logger)
+    : IHealthCheckService
 {
-    private readonly ServicePulseDbContext _context;
-    private readonly ILogger<HealthCheckService> _logger;
-
-    public HealthCheckService(ServicePulseDbContext context, ILogger<HealthCheckService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
     public async Task<HealthCheckDto> SubmitHealthCheckAsync(long serviceId, CreateHealthCheckDto dto)
     {
-        var service = await _context.Services.FindAsync(serviceId);
+        var service = await context.Services.FindAsync(serviceId);
         if (service is null)
         {
-            _logger.LogWarning("Health check submitted for non-existent service: {ServiceId}", serviceId);
+            logger.LogWarning("Health check submitted for non-existent service: {ServiceId}", serviceId);
             throw new InvalidOperationException($"Service with ID {serviceId} not found");
         }
 
         var healthCheck = HealthCheckMapper.ToEntity(serviceId, dto);
 
-        _context.HealthChecks.Add(healthCheck);
+        context.HealthChecks.Add(healthCheck);
 
         service.LastSeenAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        _logger.LogInformation("Health check submitted for service {ServiceName} (ID: {ServiceId}): Status={Status}",
+        logger.LogInformation("Health check submitted for service {ServiceName} (ID: {ServiceId}): Status={Status}",
             service.ServiceName, serviceId, healthCheck.Status);
 
         healthCheck.Service = service;
@@ -43,7 +36,7 @@ public class HealthCheckService : IHealthCheckService
 
     public async Task<HealthCheckDto?> GetHealthCheckByIdAsync(long healthCheckId)
     {
-        var healthCheck = await _context.HealthChecks
+        var healthCheck = await context.HealthChecks
             .Include(hc => hc.Service)
             .AsNoTracking()
             .FirstOrDefaultAsync(hc => hc.HealthCheckId == healthCheckId);
@@ -53,7 +46,7 @@ public class HealthCheckService : IHealthCheckService
 
     public async Task<IEnumerable<HealthCheckDto>> GetHealthChecksByServiceIdAsync(long serviceId, int limit = 10)
     {
-        var healthChecks = await _context.HealthChecks
+        var healthChecks = await context.HealthChecks
             .Include(hc => hc.Service)
             .Where(hc => hc.ServiceId == serviceId)
             .OrderByDescending(hc => hc.CheckedAt)
@@ -66,7 +59,7 @@ public class HealthCheckService : IHealthCheckService
 
     public async Task<HealthCheckDto?> GetLatestHealthCheckAsync(long serviceId)
     {
-        var healthCheck = await _context.HealthChecks
+        var healthCheck = await context.HealthChecks
             .Include(hc => hc.Service)
             .Where(hc => hc.ServiceId == serviceId)
             .OrderByDescending(hc => hc.CheckedAt)
@@ -78,7 +71,7 @@ public class HealthCheckService : IHealthCheckService
 
     public async Task<IEnumerable<HealthCheckDto>> GetHealthChecksByStatusAsync(string status, int limit = 50)
     {
-        var healthChecks = await _context.HealthChecks
+        var healthChecks = await context.HealthChecks
             .Include(hc => hc.Service)
             .Where(hc => hc.Status == status)
             .OrderByDescending(hc => hc.CheckedAt)
@@ -89,16 +82,25 @@ public class HealthCheckService : IHealthCheckService
         return HealthCheckMapper.ToDtoList(healthChecks);
     }
 
-    public async Task<IEnumerable<HealthCheckDto>> GetAllHealthChecksAsync(int limit = 20, int offset = 0)
+    public async Task<PagedResult<HealthCheckDto>> GetAllHealthChecksAsync(int pageNumber = 1, int pageSize = 20)
     {
-        var healthChecks = await _context.HealthChecks
+        var query = context.HealthChecks
             .Include(hc => hc.Service)
             .OrderByDescending(hc => hc.CheckedAt)
-            .Skip(offset)
-            .Take(limit)
-            .AsNoTracking()
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync();
+        var healthChecks = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return HealthCheckMapper.ToDtoList(healthChecks);
+        return new PagedResult<HealthCheckDto>
+        {
+            Items = HealthCheckMapper.ToDtoList(healthChecks),
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 }

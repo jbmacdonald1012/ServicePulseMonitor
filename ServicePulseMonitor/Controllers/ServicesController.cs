@@ -7,17 +7,9 @@ namespace ServicePulseMonitor.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ServicesController : ControllerBase
+public class ServicesController(IRegistrationService registrationService, ILogger<ServicesController> logger)
+    : ControllerBase
 {
-    private readonly IRegistrationService _registrationService;
-    private readonly ILogger<ServicesController> _logger;
-
-    public ServicesController(IRegistrationService registrationService, ILogger<ServicesController> logger)
-    {
-        _registrationService = registrationService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Register a new service with the monitoring system
     /// </summary>
@@ -32,14 +24,9 @@ public class ServicesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ServiceDto>> RegisterService([FromBody] CreateServiceDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         try
         {
-            var result = await _registrationService.RegisterServiceAsync(dto);
+            var result = await registrationService.RegisterServiceAsync(dto);
 
             return CreatedAtAction(
                 nameof(GetServiceById),
@@ -48,8 +35,8 @@ public class ServicesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Service registration failed: {ServiceName}", dto.ServiceName);
-            return Conflict(new { message = ex.Message });
+            logger.LogWarning(ex, "Service registration failed: {ServiceName}", dto.ServiceName);
+            return Problem(detail: ex.Message, statusCode: 409);
         }
     }
 
@@ -64,15 +51,15 @@ public class ServicesController : ControllerBase
     {
         if (pageNumber < 1)
         {
-            return BadRequest(new { message = "Page number must be >= 1" });
+            return Problem(detail: "Page number must be >= 1", statusCode: 400);
         }
 
         if (pageSize < 1 || pageSize > 100)
         {
-            return BadRequest(new { message = "Page size must be between 1 and 100" });
+            return Problem(detail: "Page size must be between 1 and 100", statusCode: 400);
         }
 
-        var result = await _registrationService.GetAllServicesAsync(pageNumber, pageSize);
+        var result = await registrationService.GetAllServicesAsync(pageNumber, pageSize);
         return Ok(result);
     }
 
@@ -84,7 +71,7 @@ public class ServicesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ServiceDto>> GetServiceById(long id)
     {
-        var service = await _registrationService.GetServiceByIdAsync(id);
+        var service = await registrationService.GetServiceByIdAsync(id);
 
         if (service is null)
         {
@@ -104,16 +91,11 @@ public class ServicesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ServiceDto>> UpdateService(long id, [FromBody] UpdateServiceDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         try
         {
-            var result = await _registrationService.UpdateServiceAsync(id, dto);
+            var result = await registrationService.UpdateServiceAsync(id, dto);
 
-            if (result == null)
+            if (result is null)
             {
                 return NotFound();
             }
@@ -122,8 +104,8 @@ public class ServicesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Service update failed: {ServiceId}", id);
-            return Conflict(new { message = ex.Message });
+            logger.LogWarning(ex, "Service update failed: {ServiceId}", id);
+            return Problem(detail: ex.Message, statusCode: 409);
         }
     }
 
@@ -135,7 +117,7 @@ public class ServicesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteService(long id)
     {
-        var deleted = await _registrationService.DeleteServiceAsync(id);
+        var deleted = await registrationService.DeleteServiceAsync(id);
 
         if (!deleted)
         {
@@ -154,10 +136,10 @@ public class ServicesController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(q))
         {
-            return BadRequest(new { message = "Search query 'q' is required" });
+            return Problem(detail: "Search query 'q' is required", statusCode: 400);
         }
 
-        var services = await _registrationService.SearchServicesByNameAsync(q);
+        var services = await registrationService.SearchServicesByNameAsync(q);
         return Ok(services);
     }
 
@@ -169,9 +151,9 @@ public class ServicesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ServiceHealthSummaryDto>> GetServiceHealthSummary(long id)
     {
-        var summary = await _registrationService.GetServiceHealthSummaryAsync(id);
+        var summary = await registrationService.GetServiceHealthSummaryAsync(id);
 
-        if (summary == null)
+        if (summary is null)
         {
             return NotFound();
         }

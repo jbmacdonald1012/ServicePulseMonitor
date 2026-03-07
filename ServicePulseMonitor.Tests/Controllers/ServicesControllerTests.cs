@@ -70,9 +70,8 @@ public class ServicesControllerTests
 
         var result = await _controller.RegisterService(dto);
 
-        Assert.That(result.Result, Is.InstanceOf<ConflictObjectResult>());
-        var conflictResult = result.Result as ConflictObjectResult;
-        Assert.That(conflictResult!.StatusCode, Is.EqualTo(409));
+        var problemResult = result.Result as ObjectResult;
+        Assert.That(problemResult!.StatusCode, Is.EqualTo(409));
     }
 
     [Test]
@@ -106,7 +105,8 @@ public class ServicesControllerTests
     {
         var result = await _controller.GetAllServices(pageNumber: 0, pageSize: 20);
 
-        Assert.That(result.Result, Is.InstanceOf<BadRequestObjectResult>());
+        var problemResult = result.Result as ObjectResult;
+        Assert.That(problemResult!.StatusCode, Is.EqualTo(400));
     }
 
     [Test]
@@ -114,7 +114,8 @@ public class ServicesControllerTests
     {
         var result = await _controller.GetAllServices(pageNumber: 1, pageSize: 101);
 
-        Assert.That(result.Result, Is.InstanceOf<BadRequestObjectResult>());
+        var problemResult = result.Result as ObjectResult;
+        Assert.That(problemResult!.StatusCode, Is.EqualTo(400));
     }
 
     [Test]
@@ -213,7 +214,8 @@ public class ServicesControllerTests
 
         var result = await _controller.UpdateService(1, updateDto);
 
-        Assert.That(result.Result, Is.InstanceOf<ConflictObjectResult>());
+        var problemResult = result.Result as ObjectResult;
+        Assert.That(problemResult!.StatusCode, Is.EqualTo(409));
     }
 
     [Test]
@@ -265,7 +267,8 @@ public class ServicesControllerTests
     {
         var result = await _controller.SearchServices("");
 
-        Assert.That(result.Result, Is.InstanceOf<BadRequestObjectResult>());
+        var problemResult = result.Result as ObjectResult;
+        Assert.That(problemResult!.StatusCode, Is.EqualTo(400));
     }
 
     [Test]

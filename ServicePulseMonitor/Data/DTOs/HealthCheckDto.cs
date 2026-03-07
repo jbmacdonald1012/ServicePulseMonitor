@@ -1,12 +1,12 @@
 namespace ServicePulseMonitor.Data.DTOs;
 
-public class HealthCheckDto
+public record HealthCheckDto
 {
-    public long HealthCheckId { get; set; }
-    public long ServiceId { get; set; }
-    public string? ServiceName { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public int? ResponseTimeMs { get; set; }
-    public DateTime CheckedAt { get; set; }
-    public Dictionary<string, object>? Details { get; set; }
+    public long HealthCheckId { get; init; }
+    public long ServiceId { get; init; }
+    public string? ServiceName { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public int? ResponseTimeMs { get; init; }
+    public DateTime CheckedAt { get; init; }
+    public Dictionary<string, object>? Details { get; init; }
 }
