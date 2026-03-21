@@ -1,11 +1,13 @@
 using NUnit.Framework;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using ServicePulseMonitor.Controllers;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Features.Services;
 using ServicePulseMonitor.Common;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Tests.Controllers;
 
@@ -13,14 +15,22 @@ namespace ServicePulseMonitor.Tests.Controllers;
 public class ServicesControllerTests
 {
     private Mock<IRegistrationService> _mockRegistrationService = null!;
+    private Mock<IHubContext<HealthHub>> _mockHubContext = null!;
     private ServicesController _controller = null!;
 
     [SetUp]
     public void SetUp()
     {
         _mockRegistrationService = new Mock<IRegistrationService>();
+
+        var mockClients = new Mock<IHubClients>();
+        mockClients.Setup(c => c.All).Returns(Mock.Of<IClientProxy>());
+        _mockHubContext = new Mock<IHubContext<HealthHub>>();
+        _mockHubContext.Setup(h => h.Clients).Returns(mockClients.Object);
+
         var logger = NullLogger<ServicesController>.Instance;
-        _controller = new ServicesController(_mockRegistrationService.Object, logger);
+        _controller = new ServicesController(
+            _mockRegistrationService.Object, _mockHubContext.Object, logger);
     }
 
     [Test]

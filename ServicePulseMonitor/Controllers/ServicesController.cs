@@ -1,14 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Features.Services;
 using ServicePulseMonitor.Common;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ServicesController(IRegistrationService registrationService, ILogger<ServicesController> logger)
-    : ControllerBase
+public class ServicesController(
+    IRegistrationService registrationService,
+    IHubContext<HealthHub> hubContext,
+    ILogger<ServicesController> logger) : ControllerBase
 {
     /// <summary>
     /// Register a new service with the monitoring system
