@@ -29,8 +29,7 @@ public class ServiceDependencyConfiguration : IEntityTypeConfiguration<ServiceDe
             .HasDefaultValueSql("NOW()")
             .IsRequired();
 
-        builder.HasIndex(sd => sd.ServiceId);
-        builder.HasIndex(sd => sd.DependsOnServiceId);
+        builder.HasIndex(sd => new { sd.ServiceId, sd.DependsOnServiceId }).IsUnique();
 
         builder.HasOne(sd => sd.Caller)
             .WithMany(s => s.CalledServices)
