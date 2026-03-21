@@ -26,4 +26,8 @@
       <Folder Include="Features\Services\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="ServicePulseMonitor.Tests" />
+    </ItemGroup>
+
 </Project>
