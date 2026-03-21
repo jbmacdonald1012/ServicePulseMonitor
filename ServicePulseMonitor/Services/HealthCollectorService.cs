@@ -101,14 +101,12 @@ public class HealthCollectorService(
                 service.ServiceName, service.CurrentStatus, newStatus);
 
             var isRecovery = newStatus == "Healthy";
+            var messageText = $"{service.ServiceName} transitioned from {service.CurrentStatus} to {newStatus}.";
             db.Alerts.Add(new Alert
             {
                 ServiceId = service.ServiceId,
                 AlertType = "StatusChange",
-                Message = JsonDocument.Parse(JsonSerializer.Serialize(new
-                {
-                    message = $"{service.ServiceName} transitioned from {service.CurrentStatus} to {newStatus}."
-                })),
+                Message = JsonDocument.Parse(JsonSerializer.Serialize(new { message = messageText })),
                 TriggeredAt = DateTime.UtcNow,
                 IsResolved = isRecovery,
                 ResolvedAt = isRecovery ? DateTime.UtcNow : null
@@ -135,6 +133,18 @@ public class HealthCollectorService(
                 responseTimeMs,
                 timestamp = DateTime.UtcNow
             });
+
+            if (!isRecovery)
+            {
+                await hubContext.Clients.All.SendAsync("AlertGenerated", new
+                {
+                    serviceId = service.ServiceId,
+                    serviceName = service.ServiceName,
+                    alertType = "StatusChange",
+                    message = messageText,
+                    triggeredAt = DateTime.UtcNow
+                });
+            }
         }
 
         service.LastSeenAt = DateTime.UtcNow;
