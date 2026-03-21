@@ -35,6 +35,14 @@ builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
 
 builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DashboardCors", policy =>
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
 builder.Services.AddHttpClient();
 builder.Services.Configure<HealthCollectorOptions>(
     builder.Configuration.GetSection("HealthCollector"));
