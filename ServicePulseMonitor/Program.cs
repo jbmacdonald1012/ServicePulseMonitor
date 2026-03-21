@@ -76,6 +76,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("DashboardCors");
+
 app.UseAuthorization();
 
 app.MapControllers();
