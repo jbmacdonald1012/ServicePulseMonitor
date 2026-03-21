@@ -28,6 +28,14 @@ public class ServicesController(IRegistrationService registrationService, ILogge
         {
             var result = await registrationService.RegisterServiceAsync(dto);
 
+            await hubContext.Clients.All.SendAsync("ServiceRegistered", new
+            {
+                serviceId = result.ServiceId,
+                serviceName = result.ServiceName,
+                baseUrl = result.BaseUrl,
+                registeredAt = result.RegisteredAt
+            });
+
             return CreatedAtAction(
                 nameof(GetServiceById),
                 new { id = result.ServiceId },
