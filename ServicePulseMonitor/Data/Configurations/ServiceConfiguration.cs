@@ -38,6 +38,12 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
             .HasColumnName("last_seen_at")
             .HasColumnType("timestamptz");
 
+        builder.Property(s => s.CurrentStatus)
+            .HasColumnName("current_status")
+            .HasMaxLength(20)
+            .HasDefaultValue("Healthy")
+            .IsRequired();
+
         builder.HasIndex(s => s.ServiceName).IsUnique();
         builder.HasIndex(s => s.LastSeenAt);
 

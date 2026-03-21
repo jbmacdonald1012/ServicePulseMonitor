@@ -21,7 +21,7 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
 
         builder.Property(a => a.UserGuid)
             .HasColumnName("user_guid")
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(a => a.AlertType)
             .HasColumnName("alert_type")
@@ -64,6 +64,7 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
         builder.HasOne(a => a.User)
             .WithMany(u => u.Alerts)
             .HasForeignKey(a => a.UserGuid)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

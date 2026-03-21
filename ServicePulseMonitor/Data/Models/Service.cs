@@ -8,6 +8,7 @@ public class Service
     public string? Description { get; set; }
     public DateTime RegisteredAt { get; set; }
     public DateTime? LastSeenAt { get; set; }
+    public string CurrentStatus { get; set; } = "Healthy";
 
     public ICollection<HealthCheck> HealthChecks { get; set; } = new List<HealthCheck>();
     public ICollection<ServiceDependency> CalledServices { get; set; } = new List<ServiceDependency>();

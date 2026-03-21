@@ -6,7 +6,7 @@ public class Alert
 {
     public long AlertId { get; set; }
     public long ServiceId { get; set; }
-    public Guid UserGuid { get; set; }
+    public Guid? UserGuid { get; set; }
     public string AlertType { get; set; } = null!;
     public DateTime TriggeredAt { get; set; }
     public bool IsAcknowledged { get; set; }
