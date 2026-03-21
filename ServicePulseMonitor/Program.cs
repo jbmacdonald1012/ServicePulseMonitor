@@ -3,6 +3,9 @@ using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.Seed;
 using ServicePulseMonitor.Features.Services;
 using ServicePulseMonitor.Features.HealthChecks;
+using ServicePulseMonitor.Hubs;
+using ServicePulseMonitor.Options;
+using ServicePulseMonitor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +33,12 @@ builder.Services.AddDbContext<ServicePulseDbContext>(options =>
 
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
+
+builder.Services.AddSignalR();
+builder.Services.AddHttpClient();
+builder.Services.Configure<HealthCollectorOptions>(
+    builder.Configuration.GetSection("HealthCollector"));
+builder.Services.AddHostedService<HealthCollectorService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -62,6 +71,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<HealthHub>("/hubs/health");
 
 app.Run();
 
