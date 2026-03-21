@@ -285,4 +285,38 @@ public class HealthCollectorServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Test]
+    public async Task CollectHealthChecks_StatusChangesToUnhealthy_BroadcastsAlertGenerated()
+    {
+        await SeedServiceAsync(status: "Healthy");
+        SetupHttpTimeout(); // Healthy → Unhealthy
+        _service = BuildService();
+
+        await _service.CollectHealthChecksAsync(CancellationToken.None);
+
+        _mockAllClients.Verify(
+            c => c.SendCoreAsync(
+                "AlertGenerated",
+                It.IsAny<object[]>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task CollectHealthChecks_RecoveryToHealthy_DoesNotBroadcastAlertGenerated()
+    {
+        await SeedServiceAsync(status: "Unhealthy");
+        SetupHttpResponse(HttpStatusCode.OK); // Unhealthy → Healthy
+        _service = BuildService();
+
+        await _service.CollectHealthChecksAsync(CancellationToken.None);
+
+        _mockAllClients.Verify(
+            c => c.SendCoreAsync(
+                "AlertGenerated",
+                It.IsAny<object[]>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
