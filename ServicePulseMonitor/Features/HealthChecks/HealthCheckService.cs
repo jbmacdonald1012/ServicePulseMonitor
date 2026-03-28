@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ServicePulseMonitor.Common;
 using ServicePulseMonitor.Data;
@@ -7,9 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace ServicePulseMonitor.Features.HealthChecks;
 
+/// <summary>EF Core implementation of <see cref="IHealthCheckService"/>.</summary>
 public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthCheckService> logger)
     : IHealthCheckService
 {
+    /// <inheritdoc/>
     public async Task<HealthCheckDto> SubmitHealthCheckAsync(long serviceId, CreateHealthCheckDto dto)
     {
         var service = await context.Services.FindAsync(serviceId);
@@ -25,6 +28,42 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
 
         service.LastSeenAt = DateTime.UtcNow;
 
+        if (service.CurrentStatus != healthCheck.Status)
+        {
+            var previousStatus = service.CurrentStatus;
+            var isRecovery = healthCheck.Status == "Healthy";
+
+            if (isRecovery)
+            {
+                var openAlerts = await context.Alerts
+                    .Where(a => a.ServiceId == serviceId && !a.IsResolved)
+                    .ToListAsync();
+                foreach (var a in openAlerts)
+                {
+                    a.IsResolved = true;
+                    a.ResolvedAt = DateTime.UtcNow;
+                }
+            }
+
+            context.Alerts.Add(new Alert
+            {
+                ServiceId = serviceId,
+                AlertType = "StatusChange",
+                Message = JsonDocument.Parse(
+                    JsonSerializer.Serialize(new
+                    {
+                        message = $"{service.ServiceName} changed from {service.CurrentStatus} to {healthCheck.Status}"
+                    })),
+                TriggeredAt = DateTime.UtcNow,
+                IsResolved = isRecovery,
+                ResolvedAt = isRecovery ? DateTime.UtcNow : null
+            });
+
+            service.CurrentStatus = healthCheck.Status;
+            logger.LogInformation("Service {ServiceName} status changed: {Old} → {New}",
+                service.ServiceName, previousStatus, healthCheck.Status);
+        }
+
         await context.SaveChangesAsync();
 
         logger.LogInformation("Health check submitted for service {ServiceName} (ID: {ServiceId}): Status={Status}",
@@ -34,6 +73,7 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
         return HealthCheckMapper.ToDto(healthCheck);
     }
 
+    /// <inheritdoc/>
     public async Task<HealthCheckDto?> GetHealthCheckByIdAsync(long healthCheckId)
     {
         var healthCheck = await context.HealthChecks
@@ -44,11 +84,18 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
         return healthCheck is null ? null : HealthCheckMapper.ToDto(healthCheck);
     }
 
-    public async Task<IEnumerable<HealthCheckDto>> GetHealthChecksByServiceIdAsync(long serviceId, int limit = 10)
+    /// <inheritdoc/>
+    public async Task<IEnumerable<HealthCheckDto>> GetHealthChecksByServiceIdAsync(
+        long serviceId, int limit = 10, DateTime? from = null, DateTime? to = null)
     {
-        var healthChecks = await context.HealthChecks
+        var query = context.HealthChecks
             .Include(hc => hc.Service)
-            .Where(hc => hc.ServiceId == serviceId)
+            .Where(hc => hc.ServiceId == serviceId);
+
+        if (from.HasValue) query = query.Where(hc => hc.CheckedAt >= from.Value);
+        if (to.HasValue)   query = query.Where(hc => hc.CheckedAt <= to.Value);
+
+        var healthChecks = await query
             .OrderByDescending(hc => hc.CheckedAt)
             .Take(limit)
             .AsNoTracking()
@@ -57,6 +104,7 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
         return HealthCheckMapper.ToDtoList(healthChecks);
     }
 
+    /// <inheritdoc/>
     public async Task<HealthCheckDto?> GetLatestHealthCheckAsync(long serviceId)
     {
         var healthCheck = await context.HealthChecks
@@ -69,6 +117,7 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
         return healthCheck is null ? null : HealthCheckMapper.ToDto(healthCheck);
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<HealthCheckDto>> GetHealthChecksByStatusAsync(string status, int limit = 50)
     {
         var healthChecks = await context.HealthChecks
@@ -82,6 +131,7 @@ public class HealthCheckService(ServicePulseDbContext context, ILogger<HealthChe
         return HealthCheckMapper.ToDtoList(healthChecks);
     }
 
+    /// <inheritdoc/>
     public async Task<PagedResult<HealthCheckDto>> GetAllHealthChecksAsync(int pageNumber = 1, int pageSize = 20)
     {
         var query = context.HealthChecks
