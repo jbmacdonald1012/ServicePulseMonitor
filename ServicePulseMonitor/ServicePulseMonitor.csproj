@@ -4,6 +4,8 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>12.0</LangVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <UserSecretsId>78147446-f1ce-4fa6-a9d9-3f88618c6181</UserSecretsId>
     </PropertyGroup>
 

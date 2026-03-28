@@ -76,13 +76,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 app.UseCors("DashboardCors");
 
 app.UseAuthorization();
 
-app.MapControllers();
 app.MapHub<HealthHub>("/hubs/health");
+app.MapControllers();
 
 app.Run();
 
+/// <summary>Entry point — exposes <see cref="Program"/> as a partial class so test projects can reference it via <c>WebApplicationFactory&lt;Program&gt;</c>.</summary>
 public partial class Program { }
