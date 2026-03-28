@@ -62,6 +62,12 @@ public class DependenciesController(
         return Ok();
     }
 
+    /// <inheritdoc cref="RecordDependency"/>
+    /// <remarks>Alias for <c>POST /api/dependencies/report</c> — accepts identical body and returns the same response.</remarks>
+    [HttpPost]
+    public Task<IActionResult> RecordDependencyAlias([FromBody] RecordDependencyRequest request)
+        => RecordDependency(request);
+
     /// <summary>Returns the full service dependency graph as a flat list of edges.</summary>
     [HttpGet]
     public async Task<IActionResult> GetDependencyGraph()

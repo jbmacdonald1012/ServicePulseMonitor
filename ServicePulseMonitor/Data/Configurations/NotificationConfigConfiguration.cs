@@ -4,8 +4,10 @@ using ServicePulseMonitor.Data.Models;
 
 namespace ServicePulseMonitor.Data.Configurations;
 
+/// <summary>EF Core entity configuration for the <see cref="NotificationConfig"/> model.</summary>
 public class NotificationConfigConfiguration : IEntityTypeConfiguration<NotificationConfig>
 {
+    /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<NotificationConfig> builder)
     {
         builder.ToTable("notification_configs");

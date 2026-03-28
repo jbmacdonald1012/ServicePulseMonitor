@@ -4,8 +4,10 @@ using System.Text.Json;
 
 namespace ServicePulseMonitor.Data.Seed;
 
+/// <summary>Seeds the database with initial development data for local testing.</summary>
 public static class DataSeeder
 {
+    /// <summary>Seeds the database with sample services, health checks, dependencies, and alert rules if no services exist yet.</summary>
     public static async Task SeedAsync(ServicePulseDbContext context)
     {
         if (await context.Services.AnyAsync())

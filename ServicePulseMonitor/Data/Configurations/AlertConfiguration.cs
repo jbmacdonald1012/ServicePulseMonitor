@@ -4,8 +4,10 @@ using ServicePulseMonitor.Data.Models;
 
 namespace ServicePulseMonitor.Data.Configurations;
 
+/// <summary>EF Core entity configuration for the <see cref="Alert"/> model.</summary>
 public class AlertConfiguration : IEntityTypeConfiguration<Alert>
 {
+    /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Alert> builder)
     {
         builder.ToTable("alerts");

@@ -4,8 +4,10 @@ using ServicePulseMonitor.Data.Models;
 
 namespace ServicePulseMonitor.Data.Configurations;
 
+/// <summary>EF Core entity configuration for the <see cref="HealthCheck"/> model.</summary>
 public class HealthCheckConfiguration : IEntityTypeConfiguration<HealthCheck>
 {
+    /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<HealthCheck> builder)
     {
         builder.ToTable("health_checks");

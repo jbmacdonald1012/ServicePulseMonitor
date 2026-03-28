@@ -4,8 +4,10 @@ using ServicePulseMonitor.Data.Models;
 
 namespace ServicePulseMonitor.Features.HealthChecks;
 
+/// <summary>Maps between <see cref="HealthCheck"/> entities and their DTO representations.</summary>
 public static class HealthCheckMapper
 {
+    /// <summary>Creates a new <see cref="HealthCheck"/> entity from a health check submission.</summary>
     public static HealthCheck ToEntity(long serviceId, CreateHealthCheckDto dto)
     {
         return new HealthCheck
@@ -22,6 +24,7 @@ public static class HealthCheckMapper
         };
     }
 
+    /// <summary>Projects a <see cref="HealthCheck"/> entity to a <see cref="HealthCheckDto"/>.</summary>
     public static HealthCheckDto ToDto(HealthCheck entity)
     {
         return new HealthCheckDto
@@ -40,6 +43,7 @@ public static class HealthCheckMapper
         };
     }
 
+    /// <summary>Projects a sequence of <see cref="HealthCheck"/> entities to <see cref="HealthCheckDto"/> instances.</summary>
     public static IEnumerable<HealthCheckDto> ToDtoList(IEnumerable<HealthCheck> entities)
     {
         return entities.Select(ToDto);

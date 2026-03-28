@@ -7,6 +7,7 @@ using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Controllers;
 
+/// <summary>Manages the lifecycle of monitored services: registration, listing, updating, deletion, and health summaries.</summary>
 [ApiController]
 [Route("api/[controller]")]
 public class ServicesController(
@@ -51,6 +52,15 @@ public class ServicesController(
             return Problem(detail: ex.Message, statusCode: 409);
         }
     }
+
+    /// <inheritdoc cref="RegisterService"/>
+    /// <remarks>Alias for <c>POST /api/services</c> — accepts identical body and returns the same response.</remarks>
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<ServiceDto>> RegisterServiceAlias([FromBody] CreateServiceDto dto)
+        => RegisterService(dto);
 
     /// <summary>
     /// Get all services (paginated)

@@ -7,9 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace ServicePulseMonitor.Features.Services;
 
+/// <summary>EF Core implementation of <see cref="IRegistrationService"/>.</summary>
 public class RegistrationService(ServicePulseDbContext context, ILogger<RegistrationService> logger)
     : IRegistrationService
 {
+    /// <inheritdoc/>
     public async Task<ServiceDto> RegisterServiceAsync(CreateServiceDto dto)
     {
         var exists = await ServiceExistsAsync(dto.ServiceName);
@@ -30,6 +32,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return ServiceMapper.ToDto(service);
     }
 
+    /// <inheritdoc/>
     public async Task<ServiceDto?> GetServiceByIdAsync(long serviceId)
     {
         var service = await context.Services
@@ -39,6 +42,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return service is null ? null : ServiceMapper.ToDto(service);
     }
 
+    /// <inheritdoc/>
     public async Task<ServiceDto?> GetServiceByNameAsync(string serviceName)
     {
         var service = await context.Services
@@ -48,12 +52,14 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return service is null ? null : ServiceMapper.ToDto(service);
     }
 
+    /// <inheritdoc/>
     public async Task<bool> ServiceExistsAsync(string serviceName)
     {
         return await context.Services
             .AnyAsync(s => s.ServiceName == serviceName);
     }
 
+    /// <inheritdoc/>
     public async Task<PagedResult<ServiceDto>> GetAllServicesAsync(int pageNumber = 1, int pageSize = 20)
     {
         var query = context.Services.AsNoTracking();
@@ -75,6 +81,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         };
     }
 
+    /// <inheritdoc/>
     public async Task<ServiceDto?> UpdateServiceAsync(long serviceId, UpdateServiceDto dto)
     {
         var service = await context.Services.FindAsync(serviceId);
@@ -107,6 +114,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return ServiceMapper.ToDto(service);
     }
 
+    /// <inheritdoc/>
     public async Task<bool> DeleteServiceAsync(long serviceId)
     {
         var service = await context.Services.FindAsync(serviceId);
@@ -125,6 +133,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return true;
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<ServiceDto>> SearchServicesByNameAsync(string query)
     {
         var services = await context.Services
@@ -136,6 +145,7 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
         return ServiceMapper.ToDtoList(services);
     }
 
+    /// <inheritdoc/>
     public async Task<ServiceHealthSummaryDto?> GetServiceHealthSummaryAsync(long serviceId)
     {
         var service = await context.Services

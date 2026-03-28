@@ -4,8 +4,10 @@ using ServicePulseMonitor.Data.Models;
 
 namespace ServicePulseMonitor.Data.Configurations;
 
+/// <summary>EF Core entity configuration for the <see cref="Service"/> model.</summary>
 public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 {
+    /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Service> builder)
     {
         builder.ToTable("services");

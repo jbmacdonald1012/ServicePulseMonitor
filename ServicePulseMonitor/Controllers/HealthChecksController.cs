@@ -5,6 +5,7 @@ using ServicePulseMonitor.Features.HealthChecks;
 
 namespace ServicePulseMonitor.Controllers;
 
+/// <summary>Submits and queries health check results for monitored services.</summary>
 [ApiController]
 [Route("api/healthchecks")]
 public class HealthChecksController(IHealthCheckService healthCheckService, ILogger<HealthChecksController> logger)
@@ -44,6 +45,18 @@ public class HealthChecksController(IHealthCheckService healthCheckService, ILog
         }
     }
 
+    /// <inheritdoc cref="SubmitHealthCheck"/>
+    /// <remarks>Alias for <c>POST /api/services/{serviceId}/healthchecks</c>.</remarks>
+    [HttpPost]
+    [Route("/api/services/{serviceId}/health")]
+    [ProducesResponseType(typeof(HealthCheckDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<ActionResult<HealthCheckDto>> SubmitHealthReport(
+        long serviceId,
+        [FromBody] CreateHealthCheckDto dto)
+        => SubmitHealthCheck(serviceId, dto);
+
     /// <summary>
     /// Get a specific health check by ID
     /// </summary>
@@ -67,25 +80,32 @@ public class HealthChecksController(IHealthCheckService healthCheckService, ILog
     }
 
     /// <summary>
-    /// Get recent health checks for a specific service
+    /// Get recent health checks for a specific service, optionally filtered by time range.
     /// </summary>
     /// <param name="serviceId">Service ID</param>
     /// <param name="limit">Maximum number of results (default: 10, max: 100)</param>
-    /// <returns>List of health checks</returns>
+    /// <param name="from">Only return checks at or after this UTC timestamp (ISO 8601).</param>
+    /// <param name="to">Only return checks at or before this UTC timestamp (ISO 8601).</param>
+    /// <returns>List of health checks ordered by <c>CheckedAt</c> descending</returns>
     /// <response code="200">Health checks retrieved</response>
+    /// <response code="400">Invalid query parameters</response>
     [HttpGet]
     [Route("/api/services/{serviceId}/healthchecks")]
     [ProducesResponseType(typeof(IEnumerable<HealthCheckDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IEnumerable<HealthCheckDto>>> GetHealthChecksByService(
         long serviceId,
-        [FromQuery] int limit = 10)
+        [FromQuery] int limit = 10,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null)
     {
         if (limit < 1 || limit > 100)
-        {
             return Problem(detail: "Limit must be between 1 and 100", statusCode: 400);
-        }
 
-        var healthChecks = await healthCheckService.GetHealthChecksByServiceIdAsync(serviceId, limit);
+        if (from.HasValue && to.HasValue && from.Value > to.Value)
+            return Problem(detail: "'from' must be earlier than or equal to 'to'", statusCode: 400);
+
+        var healthChecks = await healthCheckService.GetHealthChecksByServiceIdAsync(serviceId, limit, from, to);
         return Ok(healthChecks);
     }
 
