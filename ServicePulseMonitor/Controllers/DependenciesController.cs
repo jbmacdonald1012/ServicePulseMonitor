@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Data.Models;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Controllers;
 
@@ -11,6 +13,7 @@ namespace ServicePulseMonitor.Controllers;
 [Route("api/dependencies")]
 public class DependenciesController(
     ServicePulseDbContext db,
+    IHubContext<HealthHub> hubContext,
     ILogger<DependenciesController> logger) : ControllerBase
 {
     /// <summary>
@@ -47,16 +50,26 @@ public class DependenciesController(
 
         if (!exists)
         {
+            var discoveredAt = DateTime.UtcNow;
             db.ServiceDependencies.Add(new ServiceDependency
             {
                 ServiceId = source.ServiceId,
                 DependsOnServiceId = target.ServiceId,
-                DiscoveredAt = DateTime.UtcNow
+                DiscoveredAt = discoveredAt
             });
             await db.SaveChangesAsync();
 
             logger.LogInformation(
                 "Recorded dependency: {Source} → {Target}", source.ServiceName, target.ServiceName);
+
+            await hubContext.Clients.All.SendAsync("DependencyDiscovered", new
+            {
+                sourceId = source.ServiceId,
+                sourceName = source.ServiceName,
+                targetId = target.ServiceId,
+                targetName = target.ServiceName,
+                discoveredAt
+            });
         }
 
         return Ok();

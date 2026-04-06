@@ -134,6 +134,28 @@ public class RegistrationService(ServicePulseDbContext context, ILogger<Registra
     }
 
     /// <inheritdoc/>
+    public async Task<ServiceDto> UpsertServiceAsync(CreateServiceDto dto)
+    {
+        var existing = await context.Services
+            .FirstOrDefaultAsync(s => s.ServiceName == dto.ServiceName);
+
+        if (existing is not null)
+        {
+            existing.BaseUrl = dto.BaseUrl;
+            existing.Description = dto.Description;
+            existing.LastSeenAt = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Service re-registered (upsert): {ServiceName} (ID: {ServiceId})",
+                existing.ServiceName, existing.ServiceId);
+
+            return ServiceMapper.ToDto(existing);
+        }
+
+        return await RegisterServiceAsync(dto);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ServiceDto>> SearchServicesByNameAsync(string query)
     {
         var services = await context.Services

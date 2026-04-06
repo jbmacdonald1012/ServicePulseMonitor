@@ -1,16 +1,92 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using ServicePulseMonitor.Common;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Features.HealthChecks;
+using ServicePulseMonitor.Features.Services;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Controllers;
 
 /// <summary>Submits and queries health check results for monitored services.</summary>
 [ApiController]
 [Route("api/healthchecks")]
-public class HealthChecksController(IHealthCheckService healthCheckService, ILogger<HealthChecksController> logger)
+public class HealthChecksController(
+    IHealthCheckService healthCheckService,
+    IRegistrationService registrationService,
+    IHubContext<HealthHub> hubContext,
+    ILogger<HealthChecksController> logger)
     : ControllerBase
 {
+    /// <summary>
+    /// Accept a self-reported health update from a monitored service identified by name.
+    /// Used by the ServicePulseMonitor client library's background reporting loop.
+    /// </summary>
+    /// <param name="dto">Health report payload from the service.</param>
+    /// <response code="200">Health report accepted.</response>
+    /// <response code="400">Invalid payload.</response>
+    /// <response code="404">No service registered with that name.</response>
+    [HttpPost]
+    [Route("/api/health/report")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReportHealth([FromBody] HealthReportDto dto)
+    {
+        var service = await registrationService.GetServiceByNameAsync(dto.ServiceName);
+        if (service is null)
+            return NotFound($"No service registered with name '{dto.ServiceName}'.");
+
+        var previousStatus = service.CurrentStatus;
+
+        var createDto = new CreateHealthCheckDto
+        {
+            Status = dto.Status,
+            ResponseTimeMs = (int)Math.Min(dto.ResponseTimeMs, int.MaxValue),
+            Details = dto.Checks is { Count: > 0 }
+                ? dto.Checks.ToDictionary(
+                    c => c.Name,
+                    c => (object)new { status = c.Status, description = c.Description })
+                : null
+        };
+
+        await healthCheckService.SubmitHealthCheckAsync(service.ServiceId, createDto);
+
+        if (previousStatus != dto.Status)
+        {
+            await hubContext.Clients.All.SendAsync("ServiceStatusChanged", new
+            {
+                serviceId = service.ServiceId,
+                serviceName = service.ServiceName,
+                status = dto.Status,
+                responseTimeMs = (int)Math.Min(dto.ResponseTimeMs, int.MaxValue),
+                timestamp = dto.CheckedAt
+            });
+
+            if (dto.Status == "Healthy")
+            {
+                await hubContext.Clients.All.SendAsync("AlertsResolved", new
+                {
+                    serviceId = service.ServiceId,
+                    serviceName = service.ServiceName
+                });
+            }
+            else
+            {
+                await hubContext.Clients.All.SendAsync("AlertGenerated", new
+                {
+                    serviceId = service.ServiceId,
+                    serviceName = service.ServiceName,
+                    alertType = "StatusChange",
+                    message = $"{service.ServiceName} changed from {previousStatus ?? "Unknown"} to {dto.Status}.",
+                    triggeredAt = dto.CheckedAt
+                });
+            }
+        }
+
+        return Ok();
+    }
+
     /// <summary>
     /// Submit a health check result for a service
     /// </summary>

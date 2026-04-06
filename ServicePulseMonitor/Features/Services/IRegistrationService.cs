@@ -32,4 +32,11 @@ public interface IRegistrationService
 
     /// <summary>Returns aggregated health statistics for a service, or <c>null</c> if not found.</summary>
     Task<ServiceHealthSummaryDto?> GetServiceHealthSummaryAsync(long serviceId);
+
+    /// <summary>
+    /// Registers the service if it does not already exist; otherwise updates its <c>BaseUrl</c> and
+    /// <c>Description</c> in-place. Used by the self-registration path so that services can re-register
+    /// after a restart without being rejected with a conflict.
+    /// </summary>
+    Task<ServiceDto> UpsertServiceAsync(CreateServiceDto dto);
 }

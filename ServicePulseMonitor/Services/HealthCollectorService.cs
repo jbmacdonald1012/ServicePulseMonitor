@@ -52,6 +52,12 @@ public class HealthCollectorService(
         Service service,
         CancellationToken cancellationToken)
     {
+        if (service.BaseUrl is null)
+        {
+            logger.LogDebug("Skipping health poll for {ServiceName}: no BaseUrl configured", service.ServiceName);
+            return;
+        }
+
         var client = httpClientFactory.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
 
@@ -125,6 +131,9 @@ public class HealthCollectorService(
 
             service.CurrentStatus = newStatus;
 
+            // Save before broadcasting so the frontend re-fetch sees committed data.
+            await db.SaveChangesAsync(cancellationToken);
+
             await hubContext.Clients.All.SendAsync("ServiceStatusChanged", new
             {
                 serviceId = service.ServiceId,
@@ -134,7 +143,15 @@ public class HealthCollectorService(
                 timestamp = DateTime.UtcNow
             });
 
-            if (!isRecovery)
+            if (isRecovery)
+            {
+                await hubContext.Clients.All.SendAsync("AlertsResolved", new
+                {
+                    serviceId = service.ServiceId,
+                    serviceName = service.ServiceName
+                });
+            }
+            else
             {
                 await hubContext.Clients.All.SendAsync("AlertGenerated", new
                 {

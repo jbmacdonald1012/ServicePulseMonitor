@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ServicePulseMonitor.Common;
 using ServicePulseMonitor.Data;
 using ServicePulseMonitor.Data.DTOs;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Controllers;
 
@@ -11,6 +13,7 @@ namespace ServicePulseMonitor.Controllers;
 [Route("api/alerts")]
 public class AlertsController(
     ServicePulseDbContext db,
+    IHubContext<HealthHub> hubContext,
     ILogger<AlertsController> logger) : ControllerBase
 {
     /// <summary>
@@ -75,5 +78,30 @@ public class AlertsController(
             PageNumber = pageNumber,
             PageSize = pageSize
         });
+    }
+
+    /// <summary>
+    /// Acknowledge an alert by ID, marking it as seen without resolving it.
+    /// </summary>
+    /// <param name="id">Alert ID to acknowledge.</param>
+    /// <response code="204">Alert acknowledged.</response>
+    /// <response code="404">Alert not found.</response>
+    [HttpPost("{id}/acknowledge")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AcknowledgeAlert(long id)
+    {
+        var alert = await db.Alerts.FindAsync(id);
+        if (alert is null)
+            return NotFound();
+
+        alert.IsAcknowledged = true;
+        await db.SaveChangesAsync();
+
+        logger.LogInformation("Alert {AlertId} acknowledged", id);
+
+        await hubContext.Clients.All.SendAsync("AlertAcknowledged", new { alertId = id });
+
+        return NoContent();
     }
 }

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using ServicePulseMonitor.Controllers;
 using ServicePulseMonitor.Data.DTOs;
 using ServicePulseMonitor.Data.Models;
+using ServicePulseMonitor.Hubs;
 
 namespace ServicePulseMonitor.Tests.Controllers;
 
@@ -15,14 +18,31 @@ public class DependenciesControllerTests
     public void SetUp()
     {
         var context = TestDbContextFactory.CreateInMemoryContext();
-        _controller = new DependenciesController(context, NullLogger<DependenciesController>.Instance);
+        _controller = new DependenciesController(context, CreateHubContextMock(), NullLogger<DependenciesController>.Instance);
+    }
+
+    private static IHubContext<HealthHub> CreateHubContextMock()
+    {
+        var mockClients = new Mock<IHubClients>();
+        var mockProxy = new Mock<IClientProxy>();
+        mockProxy
+            .Setup(p => p.SendCoreAsync(
+                It.IsAny<string>(),
+                It.IsAny<object[]>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mockClients.Setup(c => c.All).Returns(mockProxy.Object);
+
+        var mockHub = new Mock<IHubContext<HealthHub>>();
+        mockHub.Setup(h => h.Clients).Returns(mockClients.Object);
+        return mockHub.Object;
     }
 
     private async Task SeedServicesAsync(params (string name, string? baseUrl)[] services)
     {
         // Resolve the context from the controller via a helper — seed directly through DB
         var context = TestDbContextFactory.CreateInMemoryContext();
-        _controller = new DependenciesController(context, NullLogger<DependenciesController>.Instance);
+        _controller = new DependenciesController(context, CreateHubContextMock(), NullLogger<DependenciesController>.Instance);
 
         foreach (var (name, baseUrl) in services)
         {
@@ -56,8 +76,8 @@ public class DependenciesControllerTests
         var getResult = await _controller.GetDependencyGraph() as OkObjectResult;
         var graph = getResult!.Value as IEnumerable<DependencyGraphItemDto>;
         Assert.That(graph!.Count(), Is.EqualTo(1));
-        Assert.That(graph.Single().SourceName, Is.EqualTo("OrderService"));
-        Assert.That(graph.Single().TargetName, Is.EqualTo("UserService"));
+        Assert.That(graph!.Single().SourceName, Is.EqualTo("OrderService"));
+        Assert.That(graph!.Single().TargetName, Is.EqualTo("UserService"));
     }
 
     [Test]

@@ -20,4 +20,7 @@ public record ServiceDto
 
     /// <summary>UTC timestamp of the most recent successful health check, or <c>null</c> if never polled.</summary>
     public DateTime? LastSeenAt { get; init; }
+
+    /// <summary>Most recently recorded health status, or <c>null</c> if no health check has been received yet.</summary>
+    public string? CurrentStatus { get; init; }
 }

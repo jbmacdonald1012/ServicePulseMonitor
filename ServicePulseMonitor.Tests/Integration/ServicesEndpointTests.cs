@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using NUnit.Framework;
 using System.Net.Http.Json;
 using ServicePulseMonitor.Data.DTOs;
@@ -7,24 +6,8 @@ using ServicePulseMonitor.Common;
 namespace ServicePulseMonitor.Tests.Integration;
 
 [TestFixture]
-public class ServicesEndpointTests
+public class ServicesEndpointTests : TestBase
 {
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
-
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        _factory = new WebApplicationFactory<Program>();
-        _client = _factory.CreateClient();
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        _client.Dispose();
-        _factory.Dispose();
-    }
 
     [Test]
     public async Task PostService_ValidDto_ReturnsCreated()
@@ -36,7 +19,7 @@ public class ServicesEndpointTests
             Description = "Integration test"
         };
 
-        var response = await _client.PostAsJsonAsync("/api/services", dto);
+        var response = await Client.PostAsJsonAsync("/api/services", dto);
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Created));
 
@@ -55,10 +38,10 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9000"
         };
 
-        var firstResponse = await _client.PostAsJsonAsync("/api/services", dto);
+        var firstResponse = await Client.PostAsJsonAsync("/api/services", dto);
         Assert.That(firstResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Created));
 
-        var secondResponse = await _client.PostAsJsonAsync("/api/services", dto);
+        var secondResponse = await Client.PostAsJsonAsync("/api/services", dto);
         Assert.That(secondResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Conflict));
     }
 
@@ -71,10 +54,10 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9000"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/services", dto);
+        var createResponse = await Client.PostAsJsonAsync("/api/services", dto);
         var createdService = await createResponse.Content.ReadFromJsonAsync<ServiceDto>();
 
-        var getResponse = await _client.GetAsync($"/api/services/{createdService!.ServiceId}");
+        var getResponse = await Client.GetAsync($"/api/services/{createdService!.ServiceId}");
 
         Assert.That(getResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.OK));
 
@@ -86,7 +69,7 @@ public class ServicesEndpointTests
     [Test]
     public async Task GetService_NonExistentService_ReturnsNotFound()
     {
-        var response = await _client.GetAsync("/api/services/999999");
+        var response = await Client.GetAsync("/api/services/999999");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }
@@ -94,7 +77,7 @@ public class ServicesEndpointTests
     [Test]
     public async Task GetAllServices_ReturnsPagedResult()
     {
-        var response = await _client.GetAsync("/api/services?pageNumber=1&pageSize=20");
+        var response = await Client.GetAsync("/api/services?pageNumber=1&pageSize=20");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.OK));
 
@@ -108,7 +91,7 @@ public class ServicesEndpointTests
     [Test]
     public async Task GetAllServices_InvalidPageNumber_ReturnsBadRequest()
     {
-        var response = await _client.GetAsync("/api/services?pageNumber=0&pageSize=20");
+        var response = await Client.GetAsync("/api/services?pageNumber=0&pageSize=20");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
     }
@@ -123,7 +106,7 @@ public class ServicesEndpointTests
             Description = "Original description"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/services", createDto);
+        var createResponse = await Client.PostAsJsonAsync("/api/services", createDto);
         var createdService = await createResponse.Content.ReadFromJsonAsync<ServiceDto>();
 
         var updateDto = new UpdateServiceDto
@@ -133,7 +116,7 @@ public class ServicesEndpointTests
             Description = "Updated description"
         };
 
-        var updateResponse = await _client.PutAsJsonAsync($"/api/services/{createdService.ServiceId}", updateDto);
+        var updateResponse = await Client.PutAsJsonAsync($"/api/services/{createdService.ServiceId}", updateDto);
 
         Assert.That(updateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.OK));
 
@@ -152,7 +135,7 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9999"
         };
 
-        var response = await _client.PutAsJsonAsync("/api/services/999999", updateDto);
+        var response = await Client.PutAsJsonAsync("/api/services/999999", updateDto);
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }
@@ -166,21 +149,21 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9000"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/services", createDto);
+        var createResponse = await Client.PostAsJsonAsync("/api/services", createDto);
         var createdService = await createResponse.Content.ReadFromJsonAsync<ServiceDto>();
 
-        var deleteResponse = await _client.DeleteAsync($"/api/services/{createdService!.ServiceId}");
+        var deleteResponse = await Client.DeleteAsync($"/api/services/{createdService!.ServiceId}");
 
         Assert.That(deleteResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NoContent));
 
-        var getResponse = await _client.GetAsync($"/api/services/{createdService.ServiceId}");
+        var getResponse = await Client.GetAsync($"/api/services/{createdService.ServiceId}");
         Assert.That(getResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }
 
     [Test]
     public async Task DeleteService_NonExistentService_ReturnsNotFound()
     {
-        var response = await _client.DeleteAsync("/api/services/999999");
+        var response = await Client.DeleteAsync("/api/services/999999");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }
@@ -200,10 +183,10 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9001"
         };
 
-        await _client.PostAsJsonAsync("/api/services", createDto1);
-        await _client.PostAsJsonAsync("/api/services", createDto2);
+        await Client.PostAsJsonAsync("/api/services", createDto1);
+        await Client.PostAsJsonAsync("/api/services", createDto2);
 
-        var response = await _client.GetAsync($"/api/services/search?q={uniquePrefix}");
+        var response = await Client.GetAsync($"/api/services/search?q={uniquePrefix}");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.OK));
 
@@ -215,7 +198,7 @@ public class ServicesEndpointTests
     [Test]
     public async Task SearchServices_EmptyQuery_ReturnsBadRequest()
     {
-        var response = await _client.GetAsync("/api/services/search?q=");
+        var response = await Client.GetAsync("/api/services/search?q=");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
     }
@@ -229,7 +212,7 @@ public class ServicesEndpointTests
             BaseUrl = "http://localhost:9000"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/services", createDto);
+        var createResponse = await Client.PostAsJsonAsync("/api/services", createDto);
         var createdService = await createResponse.Content.ReadFromJsonAsync<ServiceDto>();
 
         var healthCheckDto = new CreateHealthCheckDto
@@ -238,9 +221,9 @@ public class ServicesEndpointTests
             ResponseTimeMs = 50
         };
 
-        await _client.PostAsJsonAsync($"/api/services/{createdService!.ServiceId}/healthchecks", healthCheckDto);
+        await Client.PostAsJsonAsync($"/api/services/{createdService!.ServiceId}/healthchecks", healthCheckDto);
 
-        var response = await _client.GetAsync($"/api/services/{createdService.ServiceId}/health");
+        var response = await Client.GetAsync($"/api/services/{createdService.ServiceId}/health");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.OK));
 
@@ -253,7 +236,7 @@ public class ServicesEndpointTests
     [Test]
     public async Task GetServiceHealthSummary_NonExistentService_ReturnsNotFound()
     {
-        var response = await _client.GetAsync("/api/services/999999/health");
+        var response = await Client.GetAsync("/api/services/999999/health");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }

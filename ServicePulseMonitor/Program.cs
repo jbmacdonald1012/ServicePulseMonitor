@@ -55,7 +55,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Apply migrations and seed data in development
+// Apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ServicePulseDbContext>();
@@ -63,7 +63,6 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
     {
         await context.Database.MigrateAsync();
-        await DataSeeder.SeedAsync(context);
     }
 }
 

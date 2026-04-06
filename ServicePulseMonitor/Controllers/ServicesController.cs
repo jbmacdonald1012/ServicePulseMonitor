@@ -53,14 +53,36 @@ public class ServicesController(
         }
     }
 
-    /// <inheritdoc cref="RegisterService"/>
-    /// <remarks>Alias for <c>POST /api/services</c> — accepts identical body and returns the same response.</remarks>
+    /// <summary>
+    /// Self-registration endpoint for monitored services. Creates the service if it does not exist,
+    /// or updates its <c>BaseUrl</c> and <c>Description</c> if it has already been registered.
+    /// </summary>
+    /// <param name="dto">Service registration details</param>
+    /// <returns>The registered or updated service</returns>
+    /// <response code="200">Service updated (already existed)</response>
+    /// <response code="201">Service created</response>
+    /// <response code="400">Invalid request data</response>
     [HttpPost("register")]
+    [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public Task<ActionResult<ServiceDto>> RegisterServiceAlias([FromBody] CreateServiceDto dto)
-        => RegisterService(dto);
+    public async Task<ActionResult<ServiceDto>> RegisterServiceAlias([FromBody] CreateServiceDto dto)
+    {
+        var existed = await registrationService.ServiceExistsAsync(dto.ServiceName);
+        var result = await registrationService.UpsertServiceAsync(dto);
+
+        await hubContext.Clients.All.SendAsync("ServiceRegistered", new
+        {
+            serviceId = result.ServiceId,
+            serviceName = result.ServiceName,
+            baseUrl = result.BaseUrl,
+            registeredAt = result.RegisteredAt
+        });
+
+        return existed
+            ? Ok(result)
+            : CreatedAtAction(nameof(GetServiceById), new { id = result.ServiceId }, result);
+    }
 
     /// <summary>
     /// Get all services (paginated)

@@ -29,7 +29,8 @@ public static class ServiceMapper
             BaseUrl = entity.BaseUrl,
             Description = entity.Description,
             RegisteredAt = entity.RegisteredAt,
-            LastSeenAt = entity.LastSeenAt
+            LastSeenAt = entity.LastSeenAt,
+            CurrentStatus = entity.CurrentStatus
         };
     }
 
